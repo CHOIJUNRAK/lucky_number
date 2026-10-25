@@ -340,11 +340,21 @@ function parse(s){
 }
 
 // 생년월일 번호 = (연 × 월 × 일) × (오늘 날짜의 '일', 1~31) 의 만·천·십의 자리
+//   그 자리가 0이면 더 높은 자리로 한 칸씩 올라가며 0이 아닌 첫 숫자를 쓴다
+//   (맨 앞자리까지 0뿐이면 맨 끝 자리부터 다시 찾는다) → 생년월일 번호에는 0이 나오지 않음
+function nonZeroDigit(n,p){
+  const s=String(n);
+  for(let k=0;k<s.length;k++){
+    let i=s.length-1-p-k; i=((i%s.length)+s.length)%s.length;
+    if(s[i]!=="0")return +s[i];
+  }
+  return 1;
+}
 function fortune({y,mo,d},today){
   const product = y*mo*d;
   const day = today.getDate();
   const n = product*day;
-  return {product, code:[4,3,1].map(p=>Math.floor(n/10**p)%10).join("")};
+  return {product, code:[4,3,1].map(p=>nonZeroDigit(n,p)).join("")};
 }
 
 function render(sample=false){
@@ -506,13 +516,14 @@ function stampInto(el,str,delay){
 const digitAt=(n,p)=>Math.floor(n/10**p)%10;
 // 분 단위 번호 = (연×월×일) × 시 × 분 의 만·천·백의 자리
 // 초 단위 번호 = (연×월×일) × 시 × 분 × 초 의 십만·천·십의 자리
+//   0시는 24, 0분·0초는 60으로 계산하고, 뽑은 자리가 0이면 생년월일 번호처럼 위 자리의 0이 아닌 숫자를 씀
 // 시각은 버튼을 누를 때 컴퓨터 시계에서 가져옴 (자동 갱신 없음)
 function renderTime(birth,delay=null){
   const now=new Date(), h=now.getHours(), mi=now.getMinutes(), se=now.getSeconds();
   document.getElementById("time").value=`${pad(h)}:${pad(mi)}:${pad(se)}`;
-  const mN=birth*h*mi, sN=mN*se;
-  const mcode=[4,3,2].map(p=>digitAt(mN,p)).join("");
-  const scode=[5,3,1].map(p=>digitAt(sN,p)).join("");
+  const mN=birth*(h||24)*(mi||60), sN=mN*(se||60);
+  const mcode=[4,3,2].map(p=>nonZeroDigit(mN,p)).join("");
+  const scode=[5,3,1].map(p=>nonZeroDigit(sN,p)).join("");
   const mTag=`분 단위 번호 · ${pad(h)}:${pad(mi)}`;
   const minTag=document.getElementById("minTag");
   minTag.textContent=mTag; const t=stampInto("minDigits",mcode,delay);
